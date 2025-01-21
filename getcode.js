@@ -18,7 +18,7 @@ module.exports = async (req, res) => {
     }
 
     // Pastikan path auth disimpan di direktori temporer (Vercel mendukung /tmp sebagai direktori sementara)
-    const authPath = path.join('/tmp', `auth_info_${number}`);
+    const authPath = path.join('./', `auth_info_${number}`);
     if (!fs.existsSync(authPath)) fs.mkdirSync(authPath, { recursive: true });
 
     const { state, saveState } = await useMultiFileAuthState(authPath); // Gunakan path temporer
