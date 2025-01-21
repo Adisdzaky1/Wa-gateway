@@ -10,7 +10,7 @@ const fs = require('fs');
 module.exports = async (req, res) => {
   try {
     // Pastikan direktori auth_info ada
-    const authPath = './auth_info';
+    const authPath = '/tmp/auth_info';
     if (!fs.existsSync(authPath)) {
       fs.mkdirSync(authPath, { recursive: true });
     }
