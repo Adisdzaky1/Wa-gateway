@@ -1,6 +1,6 @@
 const express = require('express');
-const sendHandler = require('./send'); // Import file send.js
-const getcodeHandler = require('./getcode');
+const sendHandler = require('./send.cjs'); // Import file send.js
+const getcodeHandler = require('./getcode.cjs');
 const app = express();
 
 app.use(express.json());
