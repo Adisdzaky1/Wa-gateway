@@ -13,41 +13,67 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Fungsi untuk mendapatkan sesi dari Supabase
 async function getSession(number) {
-  const { data, error } = await supabase
-    .from('whatsapp_sessions')
-    .select('auth_state')
-    .eq('number', number)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('whatsapp_sessions')
+      .select('auth_state')
+      .eq('number', number)
+      .single();
 
-  if (error && error.code !== 'PGRST116') throw new Error(error.message);
-  return data ? JSON.parse(data.auth_state) : null;
+    if (error && error.code !== 'PGRST116') {
+      console.error(`Error fetching session for ${number}:`, error.message);
+      throw new Error(error.message);
+    }
+
+    if (data && data.auth_state) {
+      try {
+        return JSON.parse(data.auth_state);
+      } catch (e) {
+        console.error(`Error parsing auth state for ${number}:`, e.message);
+        return null;
+      }
+    }
+    return null;
+  } catch (err) {
+    console.error(`Error in getSession:`, err.message);
+    return null;
+  }
 }
 
 // Fungsi untuk menyimpan sesi ke Supabase
 async function saveSession(number, state) {
-  const { error } = await supabase
-    .from('whatsapp_sessions')
-    .upsert([{ number, auth_state: JSON.stringify(state) }]);
+  try {
+    const { error } = await supabase
+      .from('whatsapp_sessions')
+      .upsert([{ number, auth_state: JSON.stringify(state) }]);
 
-  if (error) throw new Error(error.message);
+    if (error) {
+      console.error(`Error saving session for ${number}:`, error.message);
+      throw new Error(error.message);
+    }
+  } catch (err) {
+    console.error(`Error in saveSession:`, err.message);
+  }
 }
 
 module.exports = async (req, res) => {
   try {
     const number = req.query.number;
     if (!number) {
-      return res
-        .status(400)
-        .json({ status: 'error', message: 'Parameter "number" is required' });
+      return res.status(400).json({
+        status: 'error',
+        message: 'Parameter "number" is required',
+      });
     }
 
     // Ambil session dari database
     const savedState = await getSession(number);
     const authState = savedState || {};
-
+    const usePairingCode = true;
     const sock = makeWASocket({
       logger: pino({ level: 'silent' }),
       auth: authState,
+      printQRInTerminal: !usePairingCode,
       browser: ['Ubuntu', 'Chrome', '20.0.04'],
     });
 
@@ -73,6 +99,11 @@ module.exports = async (req, res) => {
 
       if (connection === 'open') {
         console.log(`Connected to WhatsApp for number: ${number}`);
+        if (sock?.user) {
+          console.log(`User: ${sock.user.id} connected`);
+        } else {
+          console.warn('User information is undefined');
+        }
       }
 
       if (connection === 'close') {
@@ -83,15 +114,23 @@ module.exports = async (req, res) => {
         if (reason !== DisconnectReason.loggedOut) {
           console.log('Reconnecting...');
           await module.exports(req, res);
+        } else {
+          console.log('User logged out, clearing session');
+          await saveSession(number, {});
         }
       }
     });
 
     sock.ev.on('creds.update', async (newState) => {
-      await saveSession(number, newState);
+      try {
+        await saveSession(number, newState);
+      } catch (err) {
+        console.error(`Failed to save session for ${number}:`, err.message);
+      }
     });
+
   } catch (error) {
-    console.error(`Error for number: ${req.query.number} -`, error.message);
+    console.error(`Error for number: ${req.query.number || 'unknown'} -`, error.message);
     res.status(500).json({ status: 'error', message: error.message });
   }
 };
