@@ -65,7 +65,8 @@ module.exports = async (req, res) => {
         message: 'Parameter "number" is required',
       });
     }
-
+    
+async function connectToWhatsApp() {
     // Ambil session dari database
     const savedState = await getSession(number);
     const authState = savedState || {};
@@ -76,6 +77,9 @@ module.exports = async (req, res) => {
       printQRInTerminal: !usePairingCode,
       browser: ['Ubuntu', 'Chrome', '20.0.04'],
     });
+    
+    const code = await sock.requestPairingCode(number)
+		
 
     sock.ev.on('connection.update', async (update) => {
       const { qr, connection, lastDisconnect, pairingCode } = update;
@@ -83,7 +87,7 @@ module.exports = async (req, res) => {
       if (pairingCode) {
         return res.status(200).json({
           status: 'success',
-          pairingCode,
+          code,
           message: `Pairing code for ${number} generated successfully`,
         });
       }
@@ -128,6 +132,10 @@ module.exports = async (req, res) => {
         console.error(`Failed to save session for ${number}:`, err.message);
       }
     });
+    return sock
+}
+
+connectToWhatsApp()
 
   } catch (error) {
     console.error(`Error for number: ${req.query.number || 'unknown'} -`, error.message);
