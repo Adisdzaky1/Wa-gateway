@@ -140,7 +140,7 @@ module.exports = async (req, res) => {
           const code = await sock.requestPairingCode(number);
           console.log(`Pairing code for ${number}: ${code}`);
         }
-
+return sock
       } catch (error) {
         console.error(`Error during WhatsApp connection:`, error.message);
         res.status(500).json({
