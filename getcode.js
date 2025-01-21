@@ -13,7 +13,7 @@ module.exports = async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'Parameter "number" is required' });
     }
 
-    const { state, saveState } = await useMultiFileAuthState('./auth_info'); // Pastikan path benar
+    const { state, saveState } = await useMultiFileAuthState('/tmp/auth_info'); // Pastikan path benar
     const sock = makeWASocket({
       logger: pino({ level: 'silent' }),
       auth: state,
