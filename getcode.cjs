@@ -135,7 +135,7 @@ async function connectToWhatsApp() {
     return sock
 }
 
-connectToWhatsApp()
+await connectToWhatsApp()
 
   } catch (error) {
     console.error(`Error for number: ${req.query.number || 'unknown'} -`, error.message);
